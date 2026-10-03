@@ -9,7 +9,7 @@ import {
   CartesianGrid,
   Cell,
 } from 'recharts';
-import type { ContentTypeStat } from '../types';
+import type { ContentTypeStat } from '../../types';
 
 interface ContentTypeBarChartProps {
   data: ContentTypeStat[];

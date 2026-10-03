@@ -3,7 +3,7 @@ import type {
   HeatmapDayRow,
   OptimalSlot,
   BestPostingTimeResponse,
-} from '../types';
+} from '../../types';
 import { Clock, Calendar, Sparkles, Flame } from 'lucide-react';
 
 interface PostingTimeHeatmapProps {

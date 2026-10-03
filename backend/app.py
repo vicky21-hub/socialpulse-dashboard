@@ -3,10 +3,9 @@ import sys
 from flask import Flask, jsonify
 from flask_cors import CORS
 
-# Add parent directory to path to allow relative imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from backend.database import init_db, load_csv_to_db, DB_PATH
+from backend.database import init_db, load_csv_to_db, DB_PATH, get_connection
 from backend.routes.dashboard_routes import dashboard_bp
 from backend.routes.posts_routes import posts_bp
 from backend.routes.analytics_routes import analytics_bp
@@ -15,11 +14,14 @@ from backend.routes.upload_routes import upload_bp
 
 def create_app():
     app = Flask(__name__)
-    
-    # Configure CORS for frontend access
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-    # Register blueprints
+    # Allow all origins in development; restrict to your Netlify URL in production
+    allowed_origins = os.environ.get(
+        "ALLOWED_ORIGINS",
+        "*"  # Render will set this via env variable
+    )
+    CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
+
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(posts_bp)
     app.register_blueprint(analytics_bp)
@@ -29,28 +31,34 @@ def create_app():
     @app.route("/", methods=["GET"])
     def root():
         return jsonify({
-            "name": "Social Media Engagement Dashboard API",
+            "name": "SocialPulse — Social Media Engagement Dashboard API",
             "version": "1.0.0",
             "status": "healthy",
             "endpoints": [
-                "/api/dashboard",
-                "/api/posts",
-                "/api/analytics",
-                "/api/platforms",
-                "/api/content-types",
-                "/api/best-posting-time",
-                "/api/recommendations",
-                "/api/hashtags",
-                "/api/predict",
-                "/api/upload",
-                "/api/reset-data",
-                "/api/export"
+                "/api/dashboard", "/api/posts", "/api/analytics",
+                "/api/platforms", "/api/content-types",
+                "/api/best-posting-time", "/api/recommendations",
+                "/api/hashtags", "/api/predict",
+                "/api/upload", "/api/reset-data", "/api/export"
             ]
         })
 
     @app.route("/api/health", methods=["GET"])
     def health():
-        return jsonify({"status": "ok", "database": os.path.exists(DB_PATH)}), 200
+        db_exists = os.path.exists(DB_PATH)
+        try:
+            conn = get_connection()
+            cur = conn.cursor()
+            cur.execute("SELECT COUNT(*) FROM posts")
+            count = cur.fetchone()[0]
+            conn.close()
+        except Exception:
+            count = 0
+        return jsonify({
+            "status": "ok",
+            "database": db_exists,
+            "posts_count": count
+        }), 200
 
     @app.errorhandler(404)
     def not_found(e):
@@ -62,21 +70,32 @@ def create_app():
 
     return app
 
-# Initialize DB on import/start
-init_db()
+
+def _ensure_sample_data():
+    """Always called on startup — loads sample data if DB is empty."""
+    init_db()
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM posts")
+        count = cur.fetchone()[0]
+        conn.close()
+        if count == 0:
+            print("[startup] Database empty — loading 250 sample records...")
+            loaded = load_csv_to_db(overwrite=True)
+            print(f"[startup] Loaded {loaded} records into database.")
+        else:
+            print(f"[startup] Database ready with {count} posts.")
+    except Exception as e:
+        print(f"[startup] DB init warning: {e}")
+
+
+# Always run on module load (covers gunicorn + direct run)
+_ensure_sample_data()
 app = create_app()
 
 if __name__ == "__main__":
-    # Ensure sample data loaded if database is empty
-    from backend.database import get_connection
-    conn = get_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT COUNT(*) FROM posts")
-    count = cur.fetchone()[0]
-    conn.close()
-    if count == 0:
-        print("Database empty. Loading sample data...")
-        load_csv_to_db(overwrite=True)
-
-    print("Starting Social Media Engagement Dashboard API on http://127.0.0.1:5000 ...")
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    debug = os.environ.get("FLASK_ENV", "development") == "development"
+    print(f"Starting SocialPulse API on http://0.0.0.0:{port} ...")
+    app.run(host="0.0.0.0", port=port, debug=debug)

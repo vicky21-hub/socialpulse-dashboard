@@ -10,7 +10,7 @@ import {
   Legend,
   Cell,
 } from 'recharts';
-import type { PlatformStat } from '../types';
+import type { PlatformStat } from '../../types';
 
 interface PlatformComparisonChartProps {
   data: PlatformStat[];

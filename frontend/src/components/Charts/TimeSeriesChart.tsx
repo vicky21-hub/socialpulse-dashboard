@@ -9,7 +9,7 @@ import {
   CartesianGrid,
   Legend,
 } from 'recharts';
-import type { TimeSeriesPoint } from '../types';
+import type { TimeSeriesPoint } from '../../types';
 
 interface TimeSeriesChartProps {
   data: TimeSeriesPoint[];

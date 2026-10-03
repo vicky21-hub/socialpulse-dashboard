@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: socialpulse-api
+    env: python
+    region: oregon
+    plan: free
+    rootDir: .
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: gunicorn --chdir backend app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      # Set this after deploying Netlify frontend:
+      # - key: ALLOWED_ORIGINS
+      #   value: https://your-site.netlify.app
