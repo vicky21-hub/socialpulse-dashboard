@@ -1,15 +1,15 @@
 [build]
   # Root directory of the frontend
   base = "frontend"
-  # Build command
+  # Build command (executed inside base directory)
   command = "npm run build"
-  # Output directory (Vite outputs to dist/)
-  publish = "frontend/dist"
+  # Output directory (relative to base directory)
+  publish = "dist"
 
 [build.environment]
   NODE_VERSION = "20"
 
-# SPA routing — redirect all routes to index.html so React Router works
+# SPA routing — redirect all routes to index.html so React SPA routing works
 [[redirects]]
   from = "/*"
   to = "/index.html"
